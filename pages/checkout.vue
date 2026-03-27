@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { CHECKOUT_PLANS, normalizeCheckoutPlanId } from '~/constants/checkoutPlans'
-import { createCheckoutSession } from '~/composables/useCheckoutSession'
+import { openRazorpaySubscriptionModal } from '~/composables/useRazorpaySubscriptionCheckout'
 import { Loader2, ShieldCheck, Ban, Sparkles, PartyPopper, AlertCircle } from 'lucide-vue-next'
 
 definePageMeta({
@@ -78,16 +78,14 @@ async function onContinuePayment() {
       return
     }
 
-    const res = await createCheckoutSession(
-      {
-        planId: sub.activePlanId,
-        billingCycle: sub.billingCycle,
-        billing: { ...sub.billing },
-      },
-      session.access_token
-    )
-    if (res.redirectUrl) {
-      window.location.href = res.redirectUrl
+    if (sub.activePlanId !== 'pro' && sub.activePlanId !== 'team') {
+      sub.setCheckoutError('Choose Pro or Team to upgrade.')
+      return
+    }
+
+    const res = await openRazorpaySubscriptionModal(sub.activePlanId, session.access_token)
+    if (!res.ok) {
+      sub.setCheckoutError(res.message)
       return
     }
     sub.setCheckoutSuccess(sub.activePlanId)
