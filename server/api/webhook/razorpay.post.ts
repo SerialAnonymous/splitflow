@@ -1,4 +1,4 @@
 import { handleRazorpayWebhook } from '../../utils/handleRazorpayWebhook'
 
-/** @deprecated Use POST /api/webhook/razorpay in Razorpay Dashboard; kept for existing deployments. */
+/** POST /api/webhook/razorpay — verified Razorpay webhooks (subscription + invoice). */
 export default defineEventHandler((event) => handleRazorpayWebhook(event))

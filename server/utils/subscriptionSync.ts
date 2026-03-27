@@ -25,24 +25,47 @@ export async function upsertPaidSubscription(admin: SupabaseClient, row: {
   provider: 'stripe' | 'razorpay'
   provider_subscription_id: string | null
   provider_customer_id: string | null
+  trial_end?: string | null
   current_period_start: string | null
   current_period_end: string | null
   cancel_at_period_end: boolean
 }) {
-  const { error } = await admin.from('subscriptions').upsert(
-    {
-      user_id: row.user_id,
-      plan: row.plan,
-      status: row.status,
-      provider: row.provider,
-      provider_subscription_id: row.provider_subscription_id,
-      provider_customer_id: row.provider_customer_id,
-      current_period_start: row.current_period_start,
-      current_period_end: row.current_period_end,
-      cancel_at_period_end: row.cancel_at_period_end,
-    },
-    { onConflict: 'user_id' }
-  )
+  const base = {
+    user_id: row.user_id,
+    plan: row.plan,
+    status: row.status,
+    provider: row.provider,
+    provider_subscription_id: row.provider_subscription_id,
+    provider_customer_id: row.provider_customer_id,
+    current_period_start: row.current_period_start,
+    current_period_end: row.current_period_end,
+    cancel_at_period_end: row.cancel_at_period_end,
+  }
+  const payload =
+    row.trial_end !== undefined ? { ...base, trial_end: row.trial_end } : base
+  const { error } = await admin.from('subscriptions').upsert(payload, { onConflict: 'user_id' })
+  if (error) throw error
+}
+
+/**
+ * User cancelled in Razorpay: keep paid plan until the gateway ends the term, then you may downgrade via subscription.completed / halted.
+ */
+export async function markSubscriptionCancelledAtPeriodEnd(
+  admin: SupabaseClient,
+  userId: string,
+  opts?: { providerSubscriptionId?: string }
+) {
+  let q = admin
+    .from('subscriptions')
+    .update({
+      status: 'cancelled',
+      cancel_at_period_end: true,
+    })
+    .eq('user_id', userId)
+  if (opts?.providerSubscriptionId) {
+    q = q.eq('provider_subscription_id', opts.providerSubscriptionId)
+  }
+  const { error } = await q
   if (error) throw error
 }
 
@@ -55,6 +78,7 @@ export async function downgradeToFree(admin: SupabaseClient, userId: string) {
       provider: null,
       provider_subscription_id: null,
       provider_customer_id: null,
+      trial_end: null,
       current_period_start: null,
       current_period_end: null,
       cancel_at_period_end: false,
