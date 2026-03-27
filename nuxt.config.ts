@@ -48,6 +48,10 @@ export default defineNuxtConfig({
     razorpayPlanProYearly: process.env.RAZORPAY_PLAN_PRO_YEARLY ?? '',
     razorpayPlanTeamMonthly: process.env.RAZORPAY_PLAN_TEAM_MONTHLY ?? '',
     razorpayPlanTeamYearly: process.env.RAZORPAY_PLAN_TEAM_YEARLY ?? '',
+    /** Razorpay plan_id for subscription checkout (1y trial + renew). Pro defaults to SplitFlow plan if unset. */
+    razorpayPlanProSubscription: process.env.RAZORPAY_PLAN_PRO_SUBSCRIPTION ?? '',
+    /** Team plan_id for the same flow; falls back to RAZORPAY_PLAN_TEAM_YEARLY if unset */
+    razorpayPlanTeamSubscription: process.env.RAZORPAY_PLAN_TEAM_SUBSCRIPTION ?? '',
     /** Server-only: update `subscriptions` from payment webhooks (never expose to client) */
     supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? '',
     public: {
