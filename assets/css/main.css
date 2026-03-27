@@ -1,0 +1,78 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Billspllit-style design tokens (mobile-first) */
+@layer base {
+  :root {
+    /* Warm cream/beige background */
+    --background: 36 33% 94%;
+    --foreground: 220 14% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 220 14% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 14% 12%;
+    /* Primary: warm yellow #FDD16E */
+    --primary: 43 96% 71%;
+    --primary-foreground: 220 14% 12%;
+    --secondary: 84 52% 72%;
+    --secondary-foreground: 220 14% 12%;
+    --muted: 210 20% 97%;
+    --muted-foreground: 220 10% 46%;
+    --accent: 43 96% 91%;
+    --accent-foreground: 220 14% 12%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 36 20% 90%;
+    --input: 36 20% 90%;
+    --ring: 43 96% 71%;
+    --radius: 1rem;
+    /* Design palette */
+    --yellow: 43 96% 71%;
+    --lime: 84 52% 72%;
+    --off-white: 210 29% 97%;
+    --ink: 220 14% 12%;
+  }
+  .dark {
+    --background: 220 14% 10%;
+    --foreground: 36 33% 94%;
+    --card: 220 14% 14%;
+    --card-foreground: 36 33% 94%;
+    --primary: 43 96% 71%;
+    --primary-foreground: 220 14% 12%;
+    --muted: 220 14% 18%;
+    --muted-foreground: 220 10% 60%;
+    --border: 220 14% 22%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    width: 100%;
+    font-family: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+  }
+  body {
+    @apply min-h-screen w-full bg-background text-foreground;
+    /* clip avoids horizontal scroll without breaking position:sticky (hidden often breaks sticky) */
+    overflow-x: clip;
+  }
+}
+
+/*
+ * Document must stay full-width on desktop. The Billspllit “phone” shell (max 430px) is applied only on
+ * layouts/default.vue. If you still see body { max-width: 430px } in DevTools, clear Vite/Nuxt cache:
+ * rm -rf .nuxt node_modules/.cache && restart nuxt dev.
+ */
+@media (min-width: 430px) {
+  html body {
+    max-width: none;
+    margin-left: 0;
+    margin-right: 0;
+    box-shadow: none;
+  }
+}
