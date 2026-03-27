@@ -1,0 +1,13 @@
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "default",
+  "typescript": true,
+  "tailwind": {
+    "config": "tailwind.config.js",
+    "css": "assets/css/main.css",
+    "baseColor": "neutral",
+    "cssVariables": true
+  },
+  "framework": "nuxt",
+  "components": ["button", "card", "input", "label"]
+}
