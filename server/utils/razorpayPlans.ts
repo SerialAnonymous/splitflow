@@ -1,0 +1,24 @@
+import type { H3Event } from 'h3'
+
+export interface RazorpayPlanEnv {
+  razorpayPlanProMonthly: string
+  razorpayPlanProYearly: string
+  razorpayPlanTeamMonthly: string
+  razorpayPlanTeamYearly: string
+}
+
+export function planFromRazorpayPlanId(planId: string | undefined, env: RazorpayPlanEnv): 'pro' | 'team' {
+  if (!planId) return 'pro'
+  if (planId === env.razorpayPlanTeamMonthly || planId === env.razorpayPlanTeamYearly) return 'team'
+  return 'pro'
+}
+
+export function getRazorpayPlanEnv(event: H3Event): RazorpayPlanEnv {
+  const c = useRuntimeConfig(event)
+  return {
+    razorpayPlanProMonthly: (c.razorpayPlanProMonthly as string) ?? '',
+    razorpayPlanProYearly: (c.razorpayPlanProYearly as string) ?? '',
+    razorpayPlanTeamMonthly: (c.razorpayPlanTeamMonthly as string) ?? '',
+    razorpayPlanTeamYearly: (c.razorpayPlanTeamYearly as string) ?? '',
+  }
+}
