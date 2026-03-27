@@ -42,7 +42,7 @@ const plans = computed(() => {
         'Email reminders',
       ],
       cta: 'Upgrade to Pro',
-      ctaTo: '/signup',
+      ctaTo: '/checkout?plan=pro',
       ctaExternal: false,
     },
     {
