@@ -36,6 +36,33 @@ export const storage = createStorage({});
 export const appConfig = {};
 `,
   },
+  {
+    importKey: '#nitro-internal-virtual/error-handler',
+    rel: './dist/runtime/internal/nitro-virtual-error-handler-fallback.mjs',
+    source: `/** Dev error UI when Rollup did not inline the real virtual module (Node ESM resolving nitropack/internal/app). */
+export { default } from "./error/dev.mjs";
+`,
+  },
+  {
+    importKey: '#nitro-internal-virtual/plugins',
+    rel: './dist/runtime/internal/nitro-virtual-plugins-fallback.mjs',
+    source: `export const plugins = [];
+`,
+  },
+  {
+    importKey: '#nitro-internal-virtual/server-handlers',
+    rel: './dist/runtime/internal/nitro-virtual-server-handlers-fallback.mjs',
+    source: `/** Empty: real handlers come from the Nuxt/Nitro dev bundle. Only used if raw internal/app.mjs is resolved. */
+export const handlers = [];
+`,
+  },
+  {
+    importKey: '#nitro-internal-virtual/tasks',
+    rel: './dist/runtime/internal/nitro-virtual-tasks-fallback.mjs',
+    source: `export const scheduledTasks = false;
+export const tasks = {};
+`,
+  },
 ]
 
 if (!existsSync(internalDir)) {

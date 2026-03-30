@@ -32,6 +32,13 @@ export default defineNuxtConfig({
     cssPath: '~/assets/css/main.css',
   },
 
+  /** Bundle nitropack for SSR so `#nitro-internal-virtual/*` is not resolved by raw Node (fixes dev/preview on some Node versions). */
+  vite: {
+    ssr: {
+      noExternal: ['nitropack'],
+    },
+  },
+
   runtimeConfig: {
     /** Server-only: Stripe subscription billing */
     stripeSecretKey: process.env.STRIPE_SECRET_KEY ?? '',
