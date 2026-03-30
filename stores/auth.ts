@@ -23,6 +23,19 @@ export const useAuthStore = defineStore('auth', {
       this.loading = loading
     },
 
+    /**
+     * Mirrors auth.users → public.users and/or public.profiles (whatever exists).
+     * DB RPC bypasses RLS and matches your real FK (profiles vs users).
+     */
+    async syncPublicUserRow() {
+      const { $supabase } = useNuxtApp()
+      if (!$supabase || !this.user?.id) return
+      const { error } = await $supabase.rpc('ensure_creator_mirror_rows')
+      if (import.meta.dev && error) {
+        console.warn('[auth] ensure_creator_mirror_rows', error.message)
+      }
+    },
+
     async init() {
       const { $supabase } = useNuxtApp()
       if (!$supabase?.auth) {
@@ -33,9 +46,11 @@ export const useAuthStore = defineStore('auth', {
 
       const { data: { session } } = await $supabase.auth.getSession()
       this.setUser(session?.user ?? null)
+      await this.syncPublicUserRow()
 
       $supabase.auth.onAuthStateChange((_event, session) => {
         this.setUser(session?.user ?? null)
+        void this.syncPublicUserRow()
       })
     },
 
@@ -54,6 +69,7 @@ export const useAuthStore = defineStore('auth', {
       this.setLoading(false)
       if (error) return { error }
       this.setUser(data.user)
+      void this.syncPublicUserRow()
       return { data, error: null }
     },
 
@@ -72,6 +88,7 @@ export const useAuthStore = defineStore('auth', {
       // If Supabase requires email confirmation, session is null and we should not mark as logged in.
       if (data.session) {
         this.setUser(data.user ?? null)
+        void this.syncPublicUserRow()
       } else {
         this.setUser(null)
       }

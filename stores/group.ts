@@ -31,6 +31,14 @@ export const useGroupStore = defineStore('group', {
 
       this.loading = true
       this.setError(null)
+
+      const { error: syncErr } = await $supabase.rpc('ensure_creator_mirror_rows')
+      if (syncErr) {
+        this.loading = false
+        this.setError(syncErr.message)
+        return { data: null, error: syncErr }
+      }
+
       const { data, error } = await $supabase
         .from('groups')
         .insert({
@@ -252,6 +260,11 @@ export const useGroupStore = defineStore('group', {
       const userId = authStore.userId
       if (!$supabase || !userId) {
         return { data: null, error: { message: 'Not authenticated' } }
+      }
+
+      const { error: syncErr } = await $supabase.rpc('ensure_creator_mirror_rows')
+      if (syncErr) {
+        return { data: null, error: syncErr }
       }
 
       const { data: existing } = await $supabase
