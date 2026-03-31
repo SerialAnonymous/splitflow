@@ -1,5 +1,11 @@
 <script setup lang="ts">
-import type { CheckoutPlanDefinition } from '~/constants/checkoutPlans'
+import {
+  CHECKOUT_TRIAL_TRUST_HEADLINE,
+  afterTrialBillingSummary,
+  formatInr,
+  trialLineAfterYearFree,
+  type CheckoutPlanDefinition,
+} from '~/constants/checkoutPlans'
 import { Sparkles } from 'lucide-vue-next'
 
 const props = defineProps<{
@@ -8,20 +14,9 @@ const props = defineProps<{
 
 const yearly = defineModel<boolean>('yearly', { required: true })
 
-const displayPrice = computed(() => {
-  if (yearly.value) {
-    return `$${props.plan.yearlyUsdPerMonth}`
-  }
-  return `$${props.plan.monthlyUsd}`
-})
-
-const cycleLabel = computed(() =>
-  yearly.value ? '/month, billed yearly' : '/month'
-)
-
 const annualSavingsVsMonthly = computed(() => {
-  const monthlyAnnualized = props.plan.monthlyUsd * 12
-  const save = monthlyAnnualized - props.plan.yearlyTotalUsd
+  const monthlyAnnualized = props.plan.monthlyInr * 12
+  const save = monthlyAnnualized - props.plan.yearlyTotalInr
   return Math.max(0, save)
 })
 </script>
@@ -50,17 +45,28 @@ const annualSavingsVsMonthly = computed(() => {
         </div>
       </div>
 
-      <div class="mt-8 flex flex-wrap items-end gap-2">
-        <span class="text-4xl font-bold tabular-nums tracking-tight text-neutral-900 md:text-5xl">
-          {{ displayPrice }}
-        </span>
-        <span class="pb-1.5 text-sm font-medium text-neutral-500">{{ cycleLabel }}</span>
-      </div>
-      <p v-if="yearly" class="mt-1 text-sm text-neutral-600">
-        {{ plan.yearlyTotalUsd }} USD billed once per year
+      <p
+        class="mt-6 rounded-xl border border-emerald-200/80 bg-emerald-50/70 px-3 py-2.5 text-sm font-semibold leading-snug text-emerald-950"
+      >
+        {{ CHECKOUT_TRIAL_TRUST_HEADLINE }}
       </p>
-      <p v-else class="mt-1 text-sm text-neutral-500">
-        Switch to yearly and save more on cash flow.
+      <p class="mt-2 text-sm leading-relaxed text-neutral-700">
+        {{ trialLineAfterYearFree(plan) }}
+      </p>
+
+      <div class="mt-6 flex flex-wrap items-end gap-2 border-t border-white/40 pt-6">
+        <span class="text-4xl font-bold tabular-nums tracking-tight text-neutral-900 md:text-5xl">
+          {{ formatInr(0) }}
+        </span>
+        <span class="pb-1.5 text-sm font-medium text-neutral-500">due today</span>
+      </div>
+      <p class="mt-2 text-sm leading-relaxed text-neutral-600">
+        {{ afterTrialBillingSummary(plan, yearly) }}
+      </p>
+      <p class="mt-1 text-xs text-neutral-500">
+        Monthly vs yearly applies
+        <span class="font-medium text-neutral-600">after</span>
+        your free year—not to today’s checkout.
       </p>
 
       <div
@@ -108,7 +114,7 @@ const annualSavingsVsMonthly = computed(() => {
           v-if="yearly && annualSavingsVsMonthly > 0"
           class="mt-4 inline-flex items-center gap-2 rounded-full border border-emerald-200/60 bg-emerald-50/70 px-4 py-2 text-sm font-semibold text-emerald-900"
         >
-          Save ${{ annualSavingsVsMonthly }}/yr vs paying monthly
+          After year 1: save {{ formatInr(annualSavingsVsMonthly) }}/yr vs monthly
         </div>
       </Transition>
 

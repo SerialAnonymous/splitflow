@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { FREE_MAX_GROUPS } from '~/constants/freePlanLimits'
+
 const emit = defineEmits<{
   close: []
   created: []
@@ -11,10 +13,16 @@ const loading = ref(false)
 const error = ref<string | null>(null)
 
 const groupStore = useGroupStore()
+const userPlanStore = useUserPlanStore()
 
 async function onSubmit() {
   if (!name.value.trim()) {
     error.value = 'Group name is required.'
+    return
+  }
+  if (userPlanStore.isFree && groupStore.groups.length >= FREE_MAX_GROUPS) {
+    userPlanStore.openUpgradeModal()
+    emit('close')
     return
   }
   error.value = null

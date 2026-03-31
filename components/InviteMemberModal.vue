@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { FREE_MAX_MEMBERS_PER_GROUP } from '~/constants/freePlanLimits'
+
 const props = defineProps<{
   groupId: string
   groupName: string
@@ -14,10 +16,16 @@ const loading = ref(false)
 const error = ref<string | null>(null)
 
 const groupStore = useGroupStore()
+const userPlanStore = useUserPlanStore()
 
 async function onSubmit() {
   if (!email.value.trim()) {
     error.value = 'Enter an email address.'
+    return
+  }
+  if (userPlanStore.isFree && groupStore.members.length >= FREE_MAX_MEMBERS_PER_GROUP) {
+    userPlanStore.openUpgradeModal()
+    emit('close')
     return
   }
   error.value = null

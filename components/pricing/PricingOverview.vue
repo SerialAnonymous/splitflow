@@ -1,66 +1,78 @@
 <script setup lang="ts">
-import { Check } from 'lucide-vue-next'
+import { Check, X } from 'lucide-vue-next'
+import { CHECKOUT_PLANS, formatInr, proTrialLineAfterPrice } from '~/constants/checkoutPlans'
+
+type PlanFeature = { text: string; excluded?: boolean }
 
 const yearly = ref(false)
+const authStore = useAuthStore()
 
 const plans = computed(() => {
   const y = yearly.value
+  const pro = CHECKOUT_PLANS.pro
+  const team = CHECKOUT_PLANS.team
   return [
     {
       id: 'free',
       name: 'Free',
       highlight: false,
-      price: '$0',
-      cycle: y ? 'forever' : 'forever',
+      price: formatInr(0),
+      cycle: 'forever',
       subPrice: null as string | null,
+      trialLine: null as string | null,
       tagline: 'Get started with friends or a small crew.',
       features: [
-        '1 active group',
-        'Up to 4 members',
-        'Split expenses & balances',
-        '7-day activity history',
-        'Mobile & web access',
-      ],
+        { text: '1 active group' },
+        { text: 'Up to 4 members' },
+        { text: 'Basic expense splitting' },
+        { text: 'Limited history (7 days)' },
+        { text: 'No analytics ❗', excluded: true },
+        { text: 'No receipt upload ❗', excluded: true },
+        { text: 'No export ❗', excluded: true },
+      ] as PlanFeature[],
       cta: 'Start Free',
-      ctaTo: '/signup',
+      ctaTo: authStore.isAuthenticated ? '/dashboard' : '/signup',
       ctaExternal: false,
     },
     {
       id: 'pro',
-      name: 'Pro',
+      name: pro.name,
       highlight: true,
-      price: y ? '$7' : '$12',
+      price: formatInr(y ? pro.yearlyPerMonthInr : pro.monthlyInr),
       cycle: y ? '/month, billed yearly' : '/month',
-      subPrice: y ? '$84 billed once per year' : null,
+      subPrice: y ? `${formatInr(pro.yearlyTotalInr)} billed once per year` : null,
+      trialLine: proTrialLineAfterPrice(),
       tagline: 'For couples, roommates, and power splitters.',
       features: [
-        'Unlimited groups',
-        'Up to 12 members per group',
-        'Unlimited history & search',
-        'Receipt capture & notes',
-        'CSV export',
-        'Email reminders',
-      ],
+        { text: 'Unlimited groups' },
+        { text: 'Up to 12 members per group' },
+        { text: 'Unlimited history & search' },
+        { text: 'Receipt capture & notes' },
+        { text: 'CSV export' },
+        { text: 'Email reminders' },
+        { text: 'Analytics dashboard ⭐' },
+      ] as PlanFeature[],
       cta: 'Upgrade to Pro',
       ctaTo: '/checkout?plan=pro',
       ctaExternal: false,
     },
     {
       id: 'team',
-      name: 'Team',
+      name: team.name,
       highlight: false,
-      price: y ? '$24' : '$39',
+      price: formatInr(y ? team.yearlyPerMonthInr : team.monthlyInr),
       cycle: y ? '/month, billed yearly' : '/month',
-      subPrice: y ? '$288 billed once per year' : null,
+      subPrice: y ? `${formatInr(team.yearlyTotalInr)} billed once per year` : null,
+      trialLine: null as string | null,
       tagline: 'Offsites, clubs, and finance-approved workflows.',
       features: [
-        'Everything in Pro',
-        'Up to 50 members per group',
-        'Role-based permissions',
-        'Admin dashboard & audit trail',
-        'Priority chat support',
-        'Custom export & integrations*',
-      ],
+        { text: 'Everything in Pro' },
+        { text: 'Up to 50 members per group' },
+        { text: 'Role-based permissions' },
+        { text: 'Admin dashboard & audit logs' },
+        { text: 'Priority support' },
+        { text: 'Custom export & integrations*' },
+      ] as PlanFeature[],
       cta: 'Upgrade to Team',
       ctaTo: '/checkout?plan=team',
       ctaExternal: false,
@@ -135,8 +147,8 @@ const plans = computed(() => {
           class="text-sm text-neutral-500 transition-opacity duration-300"
           :class="yearly ? 'opacity-100' : 'opacity-70'"
         >
-          <span class="font-medium text-neutral-700">Save up to ~33%</span>
-          when you pay yearly—same features, calmer cash flow.
+          <span class="font-medium text-neutral-700">Save on yearly billing</span>
+          for Pro and Team—same features after your trial, calmer cash flow.
         </p>
       </div>
     </div>
@@ -179,10 +191,16 @@ const plans = computed(() => {
             <p class="text-sm font-semibold text-neutral-500">{{ plan.name }}</p>
             <div class="mt-4 flex flex-wrap items-baseline gap-1">
               <span class="text-4xl font-bold tracking-tight text-neutral-900 md:text-5xl">{{ plan.price }}</span>
-              <span v-if="plan.price !== '$0'" class="text-lg font-medium text-neutral-500">{{ plan.cycle }}</span>
+              <span v-if="plan.id !== 'free'" class="text-lg font-medium text-neutral-500">{{ plan.cycle }}</span>
             </div>
             <p v-if="plan.subPrice" class="mt-1 text-sm text-neutral-500">
               {{ plan.subPrice }}
+            </p>
+            <p
+              v-if="plan.trialLine"
+              class="mt-2 rounded-xl border border-emerald-200/80 bg-emerald-50/70 px-3 py-2 text-sm font-medium leading-snug text-emerald-950"
+            >
+              {{ plan.trialLine }}
             </p>
             <p class="mt-4 text-sm leading-relaxed text-neutral-600">
               {{ plan.tagline }}
@@ -193,14 +211,21 @@ const plans = computed(() => {
             <li
               v-for="(f, i) in plan.features"
               :key="i"
-              class="flex gap-3 text-sm text-neutral-700"
+              class="flex gap-3 text-sm"
+              :class="f.excluded ? 'text-neutral-500' : 'text-neutral-700'"
             >
               <span
-                class="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-700"
+                class="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full"
+                :class="
+                  f.excluded
+                    ? 'bg-rose-500/12 text-rose-700'
+                    : 'bg-emerald-500/15 text-emerald-700'
+                "
               >
-                <Check class="size-3.5" stroke-width="2.5" />
+                <X v-if="f.excluded" class="size-3.5" stroke-width="2.5" aria-hidden="true" />
+                <Check v-else class="size-3.5" stroke-width="2.5" aria-hidden="true" />
               </span>
-              <span>{{ f }}</span>
+              <span>{{ f.text }}</span>
             </li>
           </ul>
 
