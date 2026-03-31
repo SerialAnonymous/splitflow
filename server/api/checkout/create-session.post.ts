@@ -1,5 +1,6 @@
 import type { H3Event } from 'h3'
 import { getSupabaseUserFromBearer } from '../../utils/supabaseUser'
+import { RAZORPAY_SUBSCRIPTION_TOTAL_COUNT_MAX } from '../../utils/razorpayPlans'
 
 interface Body {
   planId?: string
@@ -54,7 +55,7 @@ async function createRazorpayCheckout(
   }
 
   const auth = Buffer.from(`${keyId}:${keySecret}`).toString('base64')
-  const total_count = opts.yearly ? 5 : 120
+  const total_count = opts.yearly ? 5 : RAZORPAY_SUBSCRIPTION_TOTAL_COUNT_MAX
 
   let res: {
     id?: string

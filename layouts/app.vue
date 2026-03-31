@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import AppNavbar from '~/components/navigation/AppNavbar.vue'
+import UpgradeProModal from '~/components/UpgradeProModal.vue'
+
+const userPlanStore = useUserPlanStore()
 </script>
 
 <template>
@@ -13,5 +16,7 @@ import AppNavbar from '~/components/navigation/AppNavbar.vue'
         <slot />
       </main>
     </div>
+
+    <UpgradeProModal v-if="userPlanStore.upgradeModalOpen" @close="userPlanStore.closeUpgradeModal()" />
   </div>
 </template>

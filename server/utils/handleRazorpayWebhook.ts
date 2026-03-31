@@ -7,7 +7,7 @@
  * After `start_at`, Razorpay begins the paid cadence (same plan: e.g. yearly). Each successful
  * charge typically emits `invoice.paid`; we set `status = active` and mirror billing window.
  *
- * Auto-renew: handled entirely by Razorpay until `total_count` is exhausted or the sub is cancelled.
+ * Auto-renew: handled entirely by Razorpay until `total_count` (capped per Razorpay plan rules, e.g. 100) is exhausted or the sub is cancelled.
  *
  * Cancel: user may cancel anytime in Razorpay. `subscription.cancelled` → we set `cancelled` +
  * `cancel_at_period_end = true` and keep `plan` as pro/team until the gateway ends access; then
@@ -257,6 +257,11 @@ export async function handleRazorpayWebhook(event: H3Event) {
   }
 
   if (eventName === 'subscription.charged' && subEntity?.id) {
+    const now = Math.floor(Date.now() / 1000)
+    const startAt = subEntity.start_at
+    if (startAt != null && startAt > now) {
+      return handleTrialFromSubscription(event, subEntity)
+    }
     const admin2 = getSupabaseServiceClient(event)
     if (!admin2) return { received: true, skipped: 'no supabase admin' }
     const userId = resolveUserIdFromSubNotes(subEntity)

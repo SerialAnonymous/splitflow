@@ -9,11 +9,19 @@ definePageMeta({
   layout: 'app',
 })
 
+const PRO_WELCOME_STORAGE = 'splitflow_show_pro_welcome'
+
 const authStore = useAuthStore()
+const userPlanStore = useUserPlanStore()
 const groupStore = useGroupStore()
 const expenseStore = useExpenseStore()
 const settlementStore = useSettlementStore()
 const router = useRouter()
+const route = useRoute()
+
+const showProWelcomeBanner = ref(false)
+const upgradeConfirming = ref(false)
+const upgradeSlowMessage = ref(false)
 
 const loading = ref(true)
 const totalYouOwe = ref(0)
@@ -125,8 +133,56 @@ async function onExpenseSaved() {
   await loadDashboard(true)
 }
 
-onMounted(() => {
-  loadDashboard()
+function dismissProWelcome() {
+  showProWelcomeBanner.value = false
+  try {
+    sessionStorage.removeItem(PRO_WELCOME_STORAGE)
+  } catch {
+    /* ignore */
+  }
+}
+
+async function syncSubscriptionAfterCheckout() {
+  if (route.query.upgraded !== '1' || !authStore.userId) return
+  upgradeConfirming.value = true
+  upgradeSlowMessage.value = false
+  for (let i = 0; i < 24; i++) {
+    await userPlanStore.fetchPlan()
+    const st = userPlanStore.status
+    if (userPlanStore.hasFullAccess && (st === 'trial' || st === 'active')) {
+      showProWelcomeBanner.value = true
+      try {
+        sessionStorage.setItem(PRO_WELCOME_STORAGE, '1')
+      } catch {
+        /* private mode */
+      }
+      upgradeConfirming.value = false
+      await router.replace({ path: '/dashboard', query: {} })
+      return
+    }
+    await new Promise((r) => setTimeout(r, 1500))
+  }
+  upgradeConfirming.value = false
+  upgradeSlowMessage.value = true
+  await router.replace({ path: '/dashboard', query: {} })
+}
+
+onMounted(async () => {
+  await loadDashboard()
+  if (import.meta.client && route.query.upgraded !== '1') {
+    try {
+      if (sessionStorage.getItem(PRO_WELCOME_STORAGE) === '1') {
+        await userPlanStore.fetchPlan()
+        const st = userPlanStore.status
+        if (userPlanStore.hasFullAccess && (st === 'trial' || st === 'active')) {
+          showProWelcomeBanner.value = true
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+  await syncSubscriptionAfterCheckout()
 })
 </script>
 
@@ -170,7 +226,70 @@ onMounted(() => {
           <p class="mt-2 max-w-xl text-sm text-neutral-600 md:text-base">
             Balances across every group you’re in—clear, current, and calm.
           </p>
+          <div v-if="userPlanStore.isFree" class="mt-4 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              class="inline-flex items-center rounded-full border border-white/80 bg-white/60 px-4 py-1.5 text-xs font-bold uppercase tracking-wide text-neutral-800 shadow-sm backdrop-blur-sm transition hover:bg-white/90"
+              @click="userPlanStore.openUpgradeModal()"
+            >
+              Free plan
+            </button>
+          </div>
+          <div
+            v-if="userPlanStore.isFree"
+            class="mt-4 max-w-xl rounded-2xl border border-violet-200/50 bg-gradient-to-r from-violet-50/80 to-pink-50/60 px-4 py-3 text-sm text-neutral-800 shadow-sm"
+          >
+            <span class="font-semibold text-neutral-900">Get 1 year of Pro free</span>
+            <span class="text-neutral-600"> — unlimited groups, full history, analytics, and receipt capture.</span>
+            <button
+              type="button"
+              class="mt-2 block text-sm font-semibold text-violet-700 underline decoration-violet-300 underline-offset-2 hover:text-violet-900"
+              @click="userPlanStore.openUpgradeModal()"
+            >
+              See details
+            </button>
+          </div>
         </div>
+
+        <GlassCard
+          v-if="upgradeConfirming"
+          class="flex items-center gap-3 border-violet-200/60 bg-violet-50/50 p-4 text-sm text-neutral-800 md:p-5"
+        >
+          <span
+            class="inline-block size-4 shrink-0 animate-spin rounded-full border-2 border-violet-400 border-t-transparent"
+            aria-hidden="true"
+          />
+          <span>Confirming your subscription… This usually takes a few seconds. Pro unlocks once Razorpay notifies us.</span>
+        </GlassCard>
+
+        <GlassCard
+          v-if="upgradeSlowMessage"
+          class="border-amber-200/60 bg-amber-50/50 p-4 text-sm text-amber-950 md:p-5"
+        >
+          Still confirming—try refreshing in a moment. If Pro doesn’t appear, check
+          <NuxtLink to="/settings" class="font-semibold text-violet-800 underline">Settings</NuxtLink>
+          or your email.
+        </GlassCard>
+
+        <GlassCard
+          v-if="showProWelcomeBanner && userPlanStore.hasFullAccess"
+          class="border-emerald-200/60 bg-emerald-50/45 p-5 md:p-6"
+        >
+          <p class="text-lg font-bold text-neutral-900">
+            You’re on {{ userPlanStore.plan === 'team' ? 'Team' : 'Pro' }}. Free for 1 year.
+          </p>
+          <p class="mt-2 text-sm leading-relaxed text-neutral-700">
+            Full access is on. You’re not charged for the plan until your free year ends—cancel anytime before then in
+            Razorpay.
+          </p>
+          <button
+            type="button"
+            class="mt-4 text-sm font-semibold text-violet-700 underline decoration-violet-300 underline-offset-2 hover:text-violet-900"
+            @click="dismissProWelcome"
+          >
+            Got it
+          </button>
+        </GlassCard>
 
         <div v-if="loading" class="py-16 text-center text-neutral-500">
           Loading your overview…

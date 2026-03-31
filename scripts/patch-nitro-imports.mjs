@@ -63,6 +63,13 @@ export const handlers = [];
 export const tasks = {};
 `,
   },
+  {
+    importKey: '#nitro-internal-virtual/database',
+    rel: './dist/runtime/internal/nitro-virtual-database-fallback.mjs',
+    source: `/** Empty: real DB config is injected when Nitro bundles; Node resolving internals needs this. */
+export const connectionConfigs = {};
+`,
+  },
 ]
 
 if (!existsSync(internalDir)) {
