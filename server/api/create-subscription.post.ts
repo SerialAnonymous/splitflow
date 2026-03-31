@@ -7,6 +7,7 @@
  */
 import { createError } from 'h3'
 import { getSupabaseUserFromBearer } from '../utils/supabaseUser'
+import { RAZORPAY_SUBSCRIPTION_TOTAL_COUNT_MAX } from '../utils/razorpayPlans'
 
 interface Body {
   /** Ignored if present — use Authorization bearer only */
@@ -90,7 +91,7 @@ export default defineEventHandler(async (event) => {
       },
       body: {
         plan_id: planId,
-        total_count: 120,
+        total_count: RAZORPAY_SUBSCRIPTION_TOTAL_COUNT_MAX,
         quantity: 1,
         customer_notify: 1,
         start_at: startAt,

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { GroupWithMemberCount } from '~/types/group'
+import { FREE_MAX_GROUPS } from '~/constants/freePlanLimits'
 import { getNetBalances, type RecordedSettlement } from '~/utils/calculateBalances'
 import { Plus, Users } from 'lucide-vue-next'
 
@@ -9,6 +10,7 @@ definePageMeta({
 
 const authStore = useAuthStore()
 const groupStore = useGroupStore()
+const userPlanStore = useUserPlanStore()
 const expenseStore = useExpenseStore()
 const settlementStore = useSettlementStore()
 
@@ -64,6 +66,14 @@ async function onGroupCreated() {
   await loadGroupsAndBalances()
 }
 
+function tryOpenCreateGroupModal() {
+  if (userPlanStore.isFree && groupStore.groups.length >= FREE_MAX_GROUPS) {
+    userPlanStore.openUpgradeModal()
+    return
+  }
+  showCreateModal.value = true
+}
+
 onMounted(() => {
   loadGroupsAndBalances()
 })
@@ -99,7 +109,7 @@ onMounted(() => {
       <button
         type="button"
         class="group text-left"
-        @click="showCreateModal = true"
+        @click="tryOpenCreateGroupModal"
       >
         <GlassCard
           class="flex min-h-[220px] flex-col items-center justify-center border-2 border-dashed border-white/70 bg-white/40 p-8 transition duration-250 group-hover:scale-[1.02] group-hover:border-violet-200/80 group-hover:bg-white/55"
@@ -119,7 +129,7 @@ onMounted(() => {
       <button
         type="button"
         class="group text-left"
-        @click="showCreateModal = true"
+        @click="tryOpenCreateGroupModal"
       >
         <GlassCard
           class="flex min-h-[200px] flex-col justify-between border-2 border-dashed border-violet-200/50 bg-gradient-to-br from-violet-50/50 to-pink-50/40 p-6 transition duration-250 group-hover:scale-[1.02] group-hover:shadow-[0_20px_50px_-16px_rgba(124,58,237,0.15)]"

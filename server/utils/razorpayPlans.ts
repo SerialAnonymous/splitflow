@@ -1,5 +1,11 @@
 import type { H3Event } from 'h3'
 
+/**
+ * Razorpay caps `total_count` per plan period/interval (commonly 100 for yearly billing).
+ * Exceeding it returns: "Exceeds the maximum total_count (100) allowed for the given period and interval".
+ */
+export const RAZORPAY_SUBSCRIPTION_TOTAL_COUNT_MAX = 100
+
 export interface RazorpayPlanEnv {
   razorpayPlanProMonthly: string
   razorpayPlanProYearly: string

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { CHECKOUT_PLANS, normalizeCheckoutPlanId } from '~/constants/checkoutPlans'
+import { CHECKOUT_PLANS, formatInr, normalizeCheckoutPlanId } from '~/constants/checkoutPlans'
 import { openRazorpaySubscriptionModal } from '~/composables/useRazorpaySubscriptionCheckout'
-import { Loader2, ShieldCheck, Ban, Sparkles, PartyPopper, AlertCircle } from 'lucide-vue-next'
+import { Loader2, Check, Sparkles, AlertCircle } from 'lucide-vue-next'
 
 definePageMeta({
   layout: 'app',
@@ -88,7 +88,8 @@ async function onContinuePayment() {
       sub.setCheckoutError(res.message)
       return
     }
-    sub.setCheckoutSuccess(sub.activePlanId)
+    sub.setCheckoutIdle()
+    await router.replace({ path: '/dashboard', query: { upgraded: '1' } })
   } catch (e: unknown) {
     sub.setCheckoutError(resolveCheckoutErrorMessage(e))
   }
@@ -98,50 +99,10 @@ function onRetry() {
   sub.setCheckoutIdle()
 }
 
-function goDashboard() {
-  sub.setCheckoutIdle()
-  router.push('/dashboard')
-}
-
-const successTitle = computed(() => {
-  const id = sub.completedPlanId ?? sub.activePlanId
-  return id === 'team' ? 'Welcome to Team 🚀' : 'Welcome to Pro 🚀'
-})
 </script>
 
 <template>
   <div class="checkout-root">
-    <!-- Success state -->
-    <Transition
-      enter-active-class="transition duration-500 ease-out"
-      enter-from-class="opacity-0 translate-y-4"
-      enter-to-class="opacity-100 translate-y-0"
-    >
-      <div v-if="sub.checkoutStatus === 'success'" class="mx-auto max-w-lg py-8 text-center md:py-16">
-        <GlassCard class="p-10 md:p-12">
-          <div
-            class="mx-auto flex size-20 items-center justify-center rounded-3xl bg-gradient-to-br from-emerald-400 to-violet-500 text-white shadow-xl"
-          >
-            <PartyPopper class="size-10" stroke-width="2" />
-          </div>
-          <h1 class="mt-8 text-2xl font-bold tracking-tight text-neutral-900 md:text-3xl">
-            {{ successTitle }}
-          </h1>
-          <p class="mt-4 text-sm leading-relaxed text-neutral-600 md:text-base">
-            Your workspace is ready for unlimited history, smarter exports, and calmer group money ops.
-            Billing confirmation will arrive by email once the gateway is connected.
-          </p>
-          <button
-            type="button"
-            class="mt-10 w-full rounded-2xl bg-gradient-to-r from-violet-600 to-pink-500 py-4 text-sm font-semibold text-white shadow-lg transition duration-300 hover:scale-[1.02] hover:shadow-xl"
-            @click="goDashboard"
-          >
-            Go to Dashboard
-          </button>
-        </GlassCard>
-      </div>
-    </Transition>
-
     <!-- Error state -->
     <Transition
       enter-active-class="transition duration-500 ease-out"
@@ -195,9 +156,30 @@ const successTitle = computed(() => {
             Upgrade your SplitFlow experience
           </h1>
           <p class="mt-4 max-w-2xl text-sm leading-relaxed text-neutral-600 md:text-base">
-            Unlock advanced splitting, exports, and calmer group finances—checkout takes under a minute.
-            You’re subscribing to <span class="font-semibold text-neutral-800">{{ plan.name }}</span>.
+            Add a payment method for your mandate—Razorpay won’t charge the plan until your free year ends.
+            Your subscription is confirmed in our system after setup (usually within seconds).
           </p>
+          <ul class="mt-5 flex max-w-2xl flex-col gap-2.5 text-sm text-neutral-800 sm:flex-row sm:flex-wrap sm:gap-x-8 sm:gap-y-2">
+            <li class="flex items-center gap-2">
+              <Check class="size-4 shrink-0 text-emerald-600" stroke-width="2.5" aria-hidden="true" />
+              <span><span class="font-semibold text-neutral-900">Free for 1 year</span></span>
+            </li>
+            <li class="flex items-center gap-2">
+              <Check class="size-4 shrink-0 text-emerald-600" stroke-width="2.5" aria-hidden="true" />
+              <span
+                ><span class="font-semibold text-neutral-900">{{ formatInr(plan.monthlyInr) }}/month after</span>
+                <span class="text-neutral-600"> (your chosen cycle)</span></span
+              >
+            </li>
+            <li class="flex items-center gap-2">
+              <Check class="size-4 shrink-0 text-emerald-600" stroke-width="2.5" aria-hidden="true" />
+              <span class="font-semibold text-neutral-900">No subscription charge today</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <Check class="size-4 shrink-0 text-emerald-600" stroke-width="2.5" aria-hidden="true" />
+              <span class="font-semibold text-neutral-900">Cancel anytime</span>
+            </li>
+          </ul>
         </div>
       </header>
 
@@ -224,6 +206,40 @@ const successTitle = computed(() => {
             <CheckoutPriceBreakdown :plan="plan" :yearly="yearly" :promo-applied="promoApplied" />
 
             <GlassCard class="p-6 md:p-8">
+              <ul class="mb-4 space-y-3 text-sm text-neutral-700">
+                <li class="flex gap-3">
+                  <Check class="mt-0.5 size-4 shrink-0 text-emerald-600" stroke-width="2.5" aria-hidden="true" />
+                  <span
+                    ><span class="font-semibold text-neutral-900">No Pro subscription charge today</span>
+                    <span class="text-neutral-600">
+                      — your plan price only starts after your free year (Razorpay still needs a quick payment-method check; see below).</span
+                    ></span
+                  >
+                </li>
+                <li class="flex gap-3">
+                  <Check class="mt-0.5 size-4 shrink-0 text-emerald-600" stroke-width="2.5" aria-hidden="true" />
+                  <span
+                    ><span class="font-semibold text-neutral-900">Cancel anytime</span>
+                    <span class="text-neutral-600"> before your first bill.</span></span
+                  >
+                </li>
+                <li class="flex gap-3">
+                  <Check class="mt-0.5 size-4 shrink-0 text-emerald-600" stroke-width="2.5" aria-hidden="true" />
+                  <span><span class="font-semibold text-neutral-900">Secure payments via Razorpay</span> — UPI, cards, wallets &amp; more.</span>
+                </li>
+              </ul>
+
+              <p class="mb-6 rounded-xl border border-white/60 bg-white/35 px-3 py-2.5 text-xs leading-relaxed text-neutral-600 backdrop-blur-sm">
+                <span class="font-semibold text-neutral-800">Why Razorpay shows “Total Amount ₹5”:</span>
+                That’s their standard
+                <span class="font-medium text-neutral-800">token authorization</span>
+                to set up your card or UPI mandate for future billing. It is
+                <span class="font-medium text-neutral-800">not</span>
+                your Pro/Team subscription price. Razorpay documents this as an auth payment that is
+                <span class="font-medium text-neutral-800">auto-refunded</span>
+                — you still get your full free year before plan charges begin.
+              </p>
+
               <button
                 type="button"
                 class="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-violet-600 to-pink-500 py-4 text-sm font-semibold text-white shadow-[0_12px_40px_-12px_rgba(124,58,237,0.45)] transition duration-300 hover:scale-[1.01] hover:shadow-[0_20px_50px_-16px_rgba(124,58,237,0.35)] disabled:pointer-events-none disabled:opacity-60"
@@ -236,26 +252,9 @@ const successTitle = computed(() => {
                   aria-hidden="true"
                 />
                 <span>{{
-                  sub.checkoutStatus === 'loading' ? 'Starting secure session…' : 'Continue to Secure Payment'
+                  sub.checkoutStatus === 'loading' ? 'Opening secure Razorpay checkout…' : 'Start Free 1-Year Trial'
                 }}</span>
               </button>
-
-              <ul
-                class="mt-8 flex flex-col gap-4 border-t border-white/50 pt-8 text-sm text-neutral-600 sm:flex-row sm:flex-wrap sm:justify-center sm:gap-x-10"
-              >
-                <li class="flex items-center justify-center gap-2">
-                  <Ban class="size-4 shrink-0 text-neutral-400" />
-                  Cancel anytime
-                </li>
-                <li class="flex items-center justify-center gap-2">
-                  <ShieldCheck class="size-4 shrink-0 text-emerald-600" />
-                  No hidden charges
-                </li>
-                <li class="flex items-center justify-center gap-2">
-                  <ShieldCheck class="size-4 shrink-0 text-violet-600" />
-                  Data secured
-                </li>
-              </ul>
             </GlassCard>
           </div>
         </div>

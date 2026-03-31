@@ -18,6 +18,9 @@ useHead({
 const authStore = useAuthStore()
 const router = useRouter()
 
+const firstName = ref('')
+const lastName = ref('')
+const companyName = ref('')
 const email = ref('')
 const password = ref('')
 const confirmPassword = ref('')
@@ -30,6 +33,10 @@ const inputClass =
 
 const onSubmit = async () => {
   error.value = null
+  if (!firstName.value.trim() || !lastName.value.trim()) {
+    error.value = 'Please enter your first and last name.'
+    return
+  }
   if (!email.value.trim() || !password.value) {
     error.value = 'Please enter email and password.'
     return
@@ -45,7 +52,11 @@ const onSubmit = async () => {
 
   loading.value = true
   try {
-    const result = await authStore.signUp(email.value.trim(), password.value)
+    const result = await authStore.signUp(email.value.trim(), password.value, {
+      firstName: firstName.value.trim(),
+      lastName: lastName.value.trim(),
+      companyName: companyName.value.trim() || undefined,
+    })
     if (result.error) {
       error.value = result.error.message ?? 'Sign up failed. Please try again.'
       return
@@ -123,9 +134,66 @@ const passwordsMatch = computed(
                 {{ error }}
               </div>
 
+              <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                <div class="space-y-2">
+                  <Label
+                    for="signup-first-name"
+                    class="text-xs font-semibold uppercase tracking-wide text-neutral-600"
+                  >
+                    First name<span class="text-rose-600">*</span>
+                  </Label>
+                  <Input
+                    id="signup-first-name"
+                    v-model="firstName"
+                    type="text"
+                    placeholder="Jane"
+                    autocomplete="given-name"
+                    required
+                    :disabled="loading"
+                    :class="inputClass"
+                  />
+                </div>
+                <div class="space-y-2">
+                  <Label
+                    for="signup-last-name"
+                    class="text-xs font-semibold uppercase tracking-wide text-neutral-600"
+                  >
+                    Last name<span class="text-rose-600">*</span>
+                  </Label>
+                  <Input
+                    id="signup-last-name"
+                    v-model="lastName"
+                    type="text"
+                    placeholder="Doe"
+                    autocomplete="family-name"
+                    required
+                    :disabled="loading"
+                    :class="inputClass"
+                  />
+                </div>
+              </div>
+
+              <div class="space-y-2">
+                <Label
+                  for="signup-company"
+                  class="text-xs font-semibold uppercase tracking-wide text-neutral-600"
+                >
+                  Company name
+                </Label>
+                <Input
+                  id="signup-company"
+                  v-model="companyName"
+                  type="text"
+                  placeholder="Acme Inc. (optional)"
+                  autocomplete="organization"
+                  :disabled="loading"
+                  :class="inputClass"
+                />
+              </div>
+
               <div class="space-y-2">
                 <Label for="signup-email" class="text-xs font-semibold uppercase tracking-wide text-neutral-600">
-                  Email
+                  Email<span class="text-rose-600">*</span>
                 </Label>
                 <Input
                   id="signup-email"

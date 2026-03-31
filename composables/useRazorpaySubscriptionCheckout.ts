@@ -59,6 +59,7 @@ export async function openRazorpaySubscriptionModal(
 
     const options: Record<string, unknown> = {
       ...data.razorpay,
+      /** Mandate / auth complete in Razorpay UI — Pro/Team is written only via verified webhooks (trial → active). */
       handler() {
         done({ ok: true })
       },

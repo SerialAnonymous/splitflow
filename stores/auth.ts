@@ -73,14 +73,29 @@ export const useAuthStore = defineStore('auth', {
       return { data, error: null }
     },
 
-    async signUp(email: string, password: string, options?: { displayName?: string }) {
+    async signUp(
+      email: string,
+      password: string,
+      profile: { firstName: string; lastName: string; companyName?: string }
+    ) {
       const { $supabase } = useNuxtApp()
       if (!$supabase?.auth) return { error: { message: 'Supabase not configured' } as any }
+      const first = profile.firstName.trim()
+      const last = profile.lastName.trim()
+      const fullName = [first, last].filter(Boolean).join(' ').trim()
+      const dataPayload: Record<string, string> = {
+        first_name: first,
+        last_name: last,
+        full_name: fullName,
+      }
+      const company = profile.companyName?.trim()
+      if (company) dataPayload.company_name = company
+
       this.setLoading(true)
       const { data, error } = await $supabase.auth.signUp({
         email,
         password,
-        options: options?.displayName ? { data: { full_name: options.displayName } } : undefined,
+        options: { data: dataPayload },
       })
       this.setLoading(false)
       if (error) return { error }

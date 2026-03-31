@@ -2,6 +2,7 @@
 import type { ExpensePrefill } from '~/components/ExpenseForm.vue'
 import type { ExpenseWithParticipants } from '~/types/expense'
 import AddExpenseModal from '~/components/expense/AddExpenseModal.vue'
+import { isExpenseWithinFreeHistory } from '~/constants/freePlanLimits'
 import { calculateBalances } from '~/utils/calculateBalances'
 import { Plus, Receipt } from 'lucide-vue-next'
 
@@ -19,6 +20,7 @@ const groupStore = useGroupStore()
 const authStore = useAuthStore()
 const expenseStore = useExpenseStore()
 const settlementStore = useSettlementStore()
+const userPlanStore = useUserPlanStore()
 
 const showInviteModal = ref(false)
 const showExpenseModal = ref(false)
@@ -58,7 +60,12 @@ watch(groupId, (id, prev) => {
   if (id && id !== prev) loadGroup(id)
 })
 
+let expenseHistoryIo: IntersectionObserver | null = null
+let activityHistoryIo: IntersectionObserver | null = null
+
 onUnmounted(() => {
+  expenseHistoryIo?.disconnect()
+  activityHistoryIo?.disconnect()
   groupStore.clearCurrentGroup()
   expenseStore.clearExpenses()
   settlementStore.clearSettlements()
@@ -135,6 +142,92 @@ const activityItems = computed((): ActivityRow[] => {
   return rows.sort((a, b) => b.sortKey.localeCompare(a.sortKey))
 })
 
+function expenseUnlocked(e: ExpenseWithParticipants) {
+  if (userPlanStore.hasFullAccess) return true
+  return isExpenseWithinFreeHistory(e.date || e.created_at)
+}
+
+function activityUnlocked(row: ActivityRow) {
+  if (userPlanStore.hasFullAccess) return true
+  return isExpenseWithinFreeHistory(row.sortKey)
+}
+
+const firstLockedExpenseIndex = computed(() => {
+  if (userPlanStore.hasFullAccess) return -1
+  const i = expenseStore.expenses.findIndex((e) => !expenseUnlocked(e))
+  return i
+})
+
+const firstLockedActivityIndex = computed(() => {
+  if (userPlanStore.hasFullAccess) return -1
+  const items = activityItems.value
+  const i = items.findIndex((r) => !activityUnlocked(r))
+  return i
+})
+
+const expenseLockSentinel = ref<HTMLElement | null>(null)
+const activityLockSentinel = ref<HTMLElement | null>(null)
+const showExpenseHistoryUnlock = ref(false)
+const showActivityHistoryUnlock = ref(false)
+
+function setExpenseLockSentinel(el: unknown) {
+  if (el == null) {
+    expenseLockSentinel.value = null
+    return
+  }
+  expenseLockSentinel.value = el instanceof HTMLElement ? el : null
+}
+
+function setActivityLockSentinel(el: unknown) {
+  if (el == null) {
+    activityLockSentinel.value = null
+    return
+  }
+  activityLockSentinel.value = el instanceof HTMLElement ? el : null
+}
+
+function bindExpenseHistoryIo() {
+  expenseHistoryIo?.disconnect()
+  expenseHistoryIo = null
+  showExpenseHistoryUnlock.value = false
+  if (!import.meta.client || userPlanStore.hasFullAccess || firstLockedExpenseIndex.value < 0) return
+  const el = expenseLockSentinel.value
+  if (!el) return
+  expenseHistoryIo = new IntersectionObserver(
+    ([e]) => {
+      showExpenseHistoryUnlock.value = !!(e?.isIntersecting)
+    },
+    { threshold: 0, rootMargin: '0px 0px -12% 0px' }
+  )
+  expenseHistoryIo.observe(el)
+}
+
+function bindActivityHistoryIo() {
+  activityHistoryIo?.disconnect()
+  activityHistoryIo = null
+  showActivityHistoryUnlock.value = false
+  if (!import.meta.client || userPlanStore.hasFullAccess || firstLockedActivityIndex.value < 0) return
+  const el = activityLockSentinel.value
+  if (!el) return
+  activityHistoryIo = new IntersectionObserver(
+    ([e]) => {
+      showActivityHistoryUnlock.value = !!(e?.isIntersecting)
+    },
+    { threshold: 0, rootMargin: '0px 0px -12% 0px' }
+  )
+  activityHistoryIo.observe(el)
+}
+
+watch(
+  [expenseLockSentinel, firstLockedExpenseIndex, () => expenseStore.expenses.length, () => userPlanStore.hasFullAccess],
+  () => nextTick(() => bindExpenseHistoryIo())
+)
+
+watch(
+  [activityLockSentinel, firstLockedActivityIndex, () => activityItems.value.length, () => userPlanStore.hasFullAccess],
+  () => nextTick(() => bindActivityHistoryIo())
+)
+
 async function handleLeave() {
   if (!confirm('Leave this group? You can rejoin later if invited.')) return
   leaving.value = true
@@ -162,6 +255,10 @@ function openAddExpense() {
 }
 
 function openAddViaInvoice() {
+  if (!userPlanStore.hasFullAccess) {
+    userPlanStore.openUpgradeModal()
+    return
+  }
   showInvoiceScan.value = true
 }
 
@@ -348,7 +445,17 @@ function memberInitial(m: (typeof groupStore.members)[0]) {
           <li
             v-for="(expense, idx) in expenseStore.expenses"
             :key="expense.id"
-            class="flex gap-4 pb-10 last:pb-0"
+            class="flex gap-4 pb-10 transition-[filter,opacity] duration-200 last:pb-0"
+            :class="
+              expenseUnlocked(expense)
+                ? ''
+                : 'pointer-events-none select-none blur-[3px] opacity-[0.48]'
+            "
+            :ref="
+              idx === firstLockedExpenseIndex && firstLockedExpenseIndex >= 0
+                ? (el) => setExpenseLockSentinel(el)
+                : undefined
+            "
           >
             <div class="flex w-9 shrink-0 flex-col items-center pt-1">
               <span
@@ -439,7 +546,17 @@ function memberInitial(m: (typeof groupStore.members)[0]) {
           <li
             v-for="(row, idx) in activityItems"
             :key="`${row.kind}-${row.sortKey}-${idx}`"
-            class="flex gap-4 pb-8 last:pb-0"
+            class="flex gap-4 pb-8 transition-[filter,opacity] duration-200 last:pb-0"
+            :class="
+              activityUnlocked(row)
+                ? ''
+                : 'pointer-events-none select-none blur-[3px] opacity-[0.48]'
+            "
+            :ref="
+              idx === firstLockedActivityIndex && firstLockedActivityIndex >= 0
+                ? (el) => setActivityLockSentinel(el)
+                : undefined
+            "
           >
             <div class="flex w-9 shrink-0 flex-col items-center pt-1">
               <span
@@ -519,5 +636,32 @@ function memberInitial(m: (typeof groupStore.members)[0]) {
       @close="showSettlementModal = false"
       @saved="onSettlementSaved"
     />
+
+    <Teleport to="body">
+      <div
+        v-if="
+          userPlanStore.isFree &&
+          ((activeTab === 'expenses' && showExpenseHistoryUnlock) ||
+            (activeTab === 'activity' && showActivityHistoryUnlock))
+        "
+        class="pointer-events-none fixed inset-x-0 bottom-24 z-[35] flex justify-center px-4 md:bottom-10"
+      >
+        <div
+          class="pointer-events-auto flex max-w-md flex-col items-center gap-2 rounded-2xl border border-violet-200/70 bg-white/90 px-5 py-4 text-center shadow-xl backdrop-blur-md"
+        >
+          <p class="text-sm font-bold text-neutral-900">Unlock full history</p>
+          <p class="text-xs text-neutral-600">
+            Pro keeps every expense and payment visible—upgrade when you’re ready.
+          </p>
+          <button
+            type="button"
+            class="mt-1 rounded-xl bg-gradient-to-r from-violet-600 to-pink-500 px-4 py-2 text-xs font-semibold text-white shadow-md transition hover:opacity-95"
+            @click="userPlanStore.openUpgradeModal()"
+          >
+            Upgrade to Pro
+          </button>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
