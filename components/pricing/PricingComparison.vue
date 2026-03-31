@@ -10,6 +10,7 @@ const rows: { feature: string; free: Cell; pro: Cell; team: Cell }[] = [
   { feature: 'Activity history', free: 'partial', pro: true, team: true },
   { feature: 'Receipts & attachments', free: false, pro: true, team: true },
   { feature: 'CSV export', free: false, pro: true, team: true },
+  { feature: 'Analytics dashboard', free: false, pro: true, team: true },
   { feature: 'Roles & permissions', free: false, pro: false, team: true },
 ]
 

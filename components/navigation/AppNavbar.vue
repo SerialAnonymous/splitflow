@@ -6,6 +6,7 @@ const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const groupStore = useGroupStore()
+const userPlanStore = useUserPlanStore()
 
 const groupMenuOpen = ref(false)
 const avatarMenuOpen = ref(false)
@@ -153,6 +154,15 @@ onClickOutside(avatarWrapRef, () => {
         >
           Analytics
         </NuxtLink>
+
+        <button
+          v-if="authStore.isAuthenticated"
+          type="button"
+          class="inline-flex max-w-[6.5rem] shrink-0 truncate rounded-full border border-white/80 bg-white/45 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-neutral-800 shadow-sm backdrop-blur-sm transition duration-250 hover:bg-white/75 sm:max-w-none sm:px-3 sm:text-xs"
+          @click="userPlanStore.isFree ? userPlanStore.openUpgradeModal() : navigateTo('/settings')"
+        >
+          {{ userPlanStore.planLabel }} plan
+        </button>
 
         <button
           type="button"

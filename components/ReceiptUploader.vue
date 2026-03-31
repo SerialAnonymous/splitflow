@@ -9,8 +9,10 @@ const props = withDefaults(
     /** Storage path (group_id/expense_id/filename) or null */
     modelValue?: string | null
     disabled?: boolean
+    /** Free plan: block upload/replace/remove; opens upgrade instead */
+    receiptLocked?: boolean
   }>(),
-  { modelValue: null, disabled: false }
+  { modelValue: null, disabled: false, receiptLocked: false }
 )
 
 const emit = defineEmits<{
@@ -21,6 +23,7 @@ const emit = defineEmits<{
 }>()
 
 const { $supabase } = useNuxtApp()
+const userPlanStore = useUserPlanStore()
 
 const loading = ref(false)
 const displayUrl = ref<string | null>(null)
@@ -101,11 +104,19 @@ async function onFileChange(event: Event) {
 }
 
 function triggerInput() {
+  if (props.receiptLocked) {
+    userPlanStore.openUpgradeModal()
+    return
+  }
   if (props.disabled || loading.value) return
   inputRef.value?.click()
 }
 
 async function remove() {
+  if (props.receiptLocked) {
+    userPlanStore.openUpgradeModal()
+    return
+  }
   if (!props.modelValue || !$supabase || props.disabled) return
   loading.value = true
   await $supabase.storage.from(BUCKET).remove([props.modelValue])
@@ -173,7 +184,7 @@ const isPdf = computed(() => {
         :disabled="disabled || loading"
         @click="triggerInput"
       >
-        {{ loading ? 'Uploading...' : 'Replace' }}
+        {{ receiptLocked ? 'Replace (Pro)' : loading ? 'Uploading...' : 'Replace' }}
       </button>
     </div>
 
@@ -184,7 +195,13 @@ const isPdf = computed(() => {
       :disabled="disabled || loading"
       @click="triggerInput"
     >
-      {{ loading ? 'Uploading...' : 'Upload receipt (image or PDF)' }}
+      {{
+        receiptLocked
+          ? 'Upload receipt (Pro)'
+          : loading
+            ? 'Uploading...'
+            : 'Upload receipt (image or PDF)'
+      }}
     </button>
   </div>
 </template>

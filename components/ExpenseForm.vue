@@ -30,6 +30,7 @@ const emit = defineEmits<{
 }>()
 
 const expenseStore = useExpenseStore()
+const userPlanStore = useUserPlanStore()
 
 const description = ref('')
 const amount = ref<number>(0)
@@ -250,6 +251,7 @@ function onReceiptUpdate(v: string | null) {
               :expense-id="initialExpense.id"
               :model-value="receiptUrl"
               :disabled="loading"
+              :receipt-locked="!userPlanStore.hasFullAccess"
               @update:model-value="onReceiptUpdate"
               @error="(msg) => { error = msg }"
             />
@@ -442,6 +444,7 @@ function onReceiptUpdate(v: string | null) {
             :expense-id="initialExpense.id"
             :model-value="receiptUrl"
             :disabled="loading"
+            :receipt-locked="!userPlanStore.hasFullAccess"
             @update:model-value="onReceiptUpdate"
             @error="(msg) => { error = msg }"
           />
